@@ -1,7 +1,7 @@
 ---
 name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy Clanker tokens, claim rewards, and manage limit/TWAP orders
-version: 0.28.0
+version: 0.28.1
 author: AndreaPN
 tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner]
 ---
@@ -38,6 +38,7 @@ Before any request, resolve `CAP_API_KEY`:
 
 - Always wait for complete API response before answering
 - On 401: ask user to update key. On 429: wait and retry
+- **URL query strings: use raw `&` as separator — NEVER HTML-encode it as `&amp;`.** Multi-param URLs must be exactly `?a=1&b=2`, not `?a=1&amp;b=2`.
 
 ### Table Format (REQUIRED)
 
