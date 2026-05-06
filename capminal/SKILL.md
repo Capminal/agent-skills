@@ -1,7 +1,7 @@
 ---
 name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy Clanker tokens, claim rewards, and manage limit/TWAP orders
-version: 0.27.0
+version: 0.28.0
 author: AndreaPN
 tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner]
 ---
@@ -553,7 +553,9 @@ Distribute tokens to all CAP Guild members proportionally based on their total p
 
 ### Pre-Reward Flow (REQUIRED)
 
-Follow **Pre-Action Checklist** above (check balance → resolve token → validate). If insufficient: inform user of current balance and stop.
+Follow **Pre-Action Checklist** above (check balance → resolve token → validate).
+
+If still insufficient, fall back: **resolve balance → resolve token → validate**. Only inform the user after this re-check still fails.
 
 ### Execute Reward
 
