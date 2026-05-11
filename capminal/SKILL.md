@@ -1,7 +1,7 @@
 ---
 name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy Clanker tokens, claim rewards, and manage limit/TWAP orders
-version: 0.28.1
+version: 0.29.0
 author: AndreaPN
 tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner]
 ---
@@ -427,6 +427,18 @@ Optional filters: `status` (`ACTIVE|COMPLETED|CANCELLED|EXPIRED|FAILED`), `order
 - If `duration` is missing, temporarily default to `604800` (7 days).
 - If `intervalSeconds` is missing, temporarily default to `3600` (1 hour).
 - Ensure `duration >= intervalSeconds`, and `intervalSeconds` is between `600` and `86400`.
+
+### `totalAmount` Semantics (IMPORTANT)
+
+`totalAmount` is **always denominated in `tokenAddress` units** — the token being acquired in a BUY (or disposed in a SELL), never the quote token. If the user states the amount in **quote-token** terms, convert it to `tokenAddress` units first and **subtract 5%** (inflation buffer) before sending.
+
+| User says | How to derive `totalAmount` |
+|-----------|------------------------------|
+| `buy 100% ETH by CAP` — amount given in `tokenAddress` (ETH), percentage | Resolve the ETH (`tokenAddress`) balance → use it as `totalAmount`. |
+| `buy ETH by 1M CAP` — amount given in quote token (CAP), absolute | Price-check: `ethAmount = 1,000,000 × CAP_price ÷ ETH_price`; `totalAmount = ethAmount × 0.95`. |
+| `buy ETH by 50% CAP` — amount given in quote token (CAP), percentage | Resolve the CAP (quote) balance → take 50% → convert to ETH via prices → `totalAmount = ethAmount × 0.95`. |
+
+After resolving, state the computed `totalAmount` to the user before creating the order.
 
 ```bash
 curl -s -X POST "${BASE_URL}/api/twap" \
