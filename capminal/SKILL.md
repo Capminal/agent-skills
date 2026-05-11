@@ -1,7 +1,7 @@
 ---
 name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy Clanker tokens, claim rewards, and manage limit/TWAP orders
-version: 0.29.0
+version: 0.29.1
 author: AndreaPN
 tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner]
 ---
@@ -938,8 +938,11 @@ Row values: `{tokenSymbol}` | `{tokenAddress}` (pad columns using longest value)
 | Symbol | Address |
 |--------|---------|
 | ETH (native) | `0x0000000000000000000000000000000000000000` |
+| WETH | `0x4200000000000000000000000000000000000006` |
 | USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
 | CAP | `0xbfa733702305280F066D470afDFA784fA70e2649` |
 | Burn address | `0x000000000000000000000000000000000000dEaD` |
+
+**ETH (native) and WETH are distinct tokens** — when the user says "ETH" use `0x0000000000000000000000000000000000000000`; when the user says "WETH" use `0x4200000000000000000000000000000000000006`. Never substitute one for the other (e.g. don't quote/buy a TWAP in native ETH when the user asked for WETH, and vice versa). If the wallet balance lists only one of them, resolve the other's balance explicitly via Resolve Balance before deciding it's unavailable.
 
 For any other symbol, resolve via wallet balance or Resolve Tokens API.
