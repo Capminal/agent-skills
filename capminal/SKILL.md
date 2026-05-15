@@ -1,9 +1,9 @@
 ---
 name: cap-skill
-description: CAP Skills can help agents to interact with Cap Wallet, deploy Clanker tokens, claim rewards, and manage limit/TWAP orders
-version: 0.29.1
+description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, and manage limit/TWAP orders
+version: 0.30.0
 author: AndreaPN
-tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner]
+tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner]
 ---
 
 # Capminal - Cap Wallet Integration
@@ -128,9 +128,11 @@ curl -s "${BASE_URL}/api/token/resolve-balance?addresses=0xabc...,0xdef..." \
 
 ---
 
-## 3. Deploy Clanker Token
+## 3. Deploy Token (Clanker or Liquid)
 
-**Triggers:** deploy token, create token, launch token, clanker, orb
+**Triggers:** deploy token, create token, launch token, clanker, liquid, orb
+
+Deploy a token via the Clanker or Liquid launcher. Both share the same ABI/factory shape; the `launcher` field picks which protocol's contracts to use. Default `Liquid`.
 
 ### Execute Deploy
 
@@ -143,17 +145,21 @@ curl -s -X POST "${BASE_URL}/api/orbs/createOrb" \
     "symbol": "MTK",
     "fee": "1",
     "marketCap": "10E",
-    "initialBuyAmount": "0"
+    "initialBuyAmount": "0",
+    "launcher": "Liquid"
   }'
 ```
 
-**Required:** `name`, `symbol`. **Defaults:** `fee`="1", `marketCap`="10E", `initialBuyAmount`="0".
+**Required:** `name`, `symbol`. **Defaults:** `fee`="1", `marketCap`="10E", `initialBuyAmount`="0", `launcher`="Liquid".
 
-**Optional:** `description`, `imageUrl`, `secondsToDecay`, `telegramLink`, `twitterLink`, `farcasterLink`, `websiteLink`.
+**Optional:** `description`, `imageUrl`, `secondsToDecay`, `telegramLink`, `twitterLink`, `farcasterLink`, `websiteLink`, `launcher` (`Clanker` or `Liquid`, default `Liquid`).
 
 **Image handling:** If the user wants a token image, they must provide a public HTTPS URL (e.g., hosted on Imgur, Cloudflare, etc.). Pass it as `imageUrl` in the request body. If user sends an image attachment without providing a URL in text, ask them to upload it to a hosting service and share the direct link.
 
-**Response:** `data.transactionHash`, `data.poolId`, `data.tokenAddress`. Show 2 orb detail links: `https://www.capminal.ai/base/{tokenAddress}`, `https://www.clanker.world/clanker/{tokenAddress}`
+**Response:** `data.transactionHash`, `data.poolId`, `data.tokenAddress`. Show 2 orb detail links:
+- Always: `https://www.capminal.ai/base/{tokenAddress}`
+- If `launcher` is `Liquid` (or omitted): `https://app.liquidprotocol.org/tokens/{tokenAddress}`
+- If `launcher` is `Clanker`: `https://www.clanker.world/clanker/{tokenAddress}`
 
 ---
 
@@ -265,14 +271,16 @@ When user asks to **burn** tokens, this is a transfer to the standard burn addre
 
 ---
 
-## 6. Get Clanker Rewards
+## 6. Get Token Rewards (Clanker or Liquid)
 
-**Triggers:** clanker rewards, uncollected rewards, pending rewards, rewards list
+**Triggers:** clanker rewards, liquid rewards, uncollected rewards, pending rewards, rewards list
 
 ```bash
-curl -s -X GET "${BASE_URL}/api/wallet/getUncollectedV4Rewards" \
+curl -s -X GET "${BASE_URL}/api/wallet/getUncollectedV4Rewards?launcher=Liquid" \
   -H "x-cap-api-key: $CAP_API_KEY"
 ```
+
+**Query param `launcher`:** `Clanker` or `Liquid`. Default `Liquid`. Returns rewards for **one launcher at a time** — to list everything, call this endpoint twice (once with `launcher=Clanker`, once with `launcher=Liquid`).
 
 **Response contains:** `data[]` with `tokenAddress`, `tokenSymbol`, `tokenName`, `fee`, `poolId`, `imageUrl`.
 
@@ -282,33 +290,34 @@ Only display rewards with amount `> 0` (hide zero/empty rewards).
 
 ---
 
-## 7. Claim Clanker Rewards
+## 7. Claim Token Rewards (Clanker or Liquid)
 
-**Triggers:** claim rewards, claim clanker rewards, collect rewards
+**Triggers:** claim rewards, claim clanker rewards, claim liquid rewards, collect rewards
 
 ### Pre-Claim Check (REQUIRED)
 
-Before claiming, ALWAYS call **Get Clanker Rewards** first:
+Before claiming, ALWAYS call **Get Token Rewards** first with the same `launcher` you intend to claim against:
 
 ```bash
-curl -s -X GET "${BASE_URL}/api/wallet/getUncollectedV4Rewards" \
+curl -s -X GET "${BASE_URL}/api/wallet/getUncollectedV4Rewards?launcher=Liquid" \
   -H "x-cap-api-key: $CAP_API_KEY"
 ```
 
 - If `data[]` is empty: tell user no claimable rewards and stop.
 - If user provides `tokenAddress`: claim only if that address exists in `data[]`.
-- If provided token is not in `data[]`: do not claim; show available reward tokens (`tokenSymbol`, `tokenAddress`) and ask user to choose one.
+- If provided token is not in `data[]`: do not claim; show available reward tokens (`tokenSymbol`, `tokenAddress`) and ask user to choose one — or check the other launcher.
 
 ```bash
-curl -s -X POST "${BASE_URL}/api/wallet/claimClankerV4Rewards" \
+curl -s -X POST "${BASE_URL}/api/wallet/claimV4Rewards" \
   -H "x-cap-api-key: $CAP_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "tokenAddress": "0x..."
+    "tokenAddress": "0x...",
+    "launcher": "Liquid"
   }'
 ```
 
-**Required:** `tokenAddress`.
+**Required:** `tokenAddress`. **Optional:** `launcher` (`Clanker` or `Liquid`, default `Liquid`).
 
 **Response:** `data.transactionHash`. Show tx link: `https://basescan.org/tx/{hash}`
 
@@ -863,11 +872,11 @@ curl -s -X POST "${BASE_URL}/api/wallet/updateSlippageBps" \
 
 **Triggers:** transfer owner, transfer ownership, change owner, transfer orb owner, hand over orb, give orb to
 
-Transfer all 3 ownership roles (reward recipient, reward admin, admin) of a Clanker V4 orb to a new owner address. **Caller must currently be the owner — otherwise the API returns 403.**
+Transfer all 3 ownership roles (reward recipient, reward admin, admin) of a Clanker or Liquid orb to a new owner address. **Caller must currently be the owner — otherwise the API returns 403.** The on-chain calls hit the launcher's fee-conversion locker, so `launcher` must match the launcher that originally deployed the token. If unknown, read `gemSource` from `GET /api/orbs/market/{tokenAddress}` — it returns `Clanker` or `Liquid`.
 
 ### Pre-Transfer Validation (REQUIRED)
 
-- `tokenAddress` MUST be a valid `0x...` Clanker V4 token address (40 hex chars after `0x`). If user gives a symbol, resolve it via Resolve Tokens API first (Section 2).
+- `tokenAddress` MUST be a valid `0x...` Clanker or Liquid token address (40 hex chars after `0x`). If user gives a symbol, resolve it via Resolve Tokens API first (Section 2).
 - `newOwner` MUST be a valid `0x...` EVM address. ENS (`*.eth`) and `@handles` are NOT accepted by this endpoint.
 - Reject if either address is malformed.
 - **Confirm with user before executing:** "This will transfer reward recipient, reward admin, and admin of {tokenAddress} to {newOwner}. This is irreversible by you — only the new owner can transfer it back. Proceed?"
@@ -876,15 +885,16 @@ Transfer all 3 ownership roles (reward recipient, reward admin, admin) of a Clan
 
 ```bash
 curl -s -X POST "${BASE_URL}/api/orbs/transferOrbOwner" \
-  -H "Authorization: $AUTH_TOKEN" \
+  -H "x-cap-api-key: $CAP_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "tokenAddress": "0xabc...abcd",
-    "newOwner": "0xa12...1234"
+    "newOwner": "0xa12...1234",
+    "launcher": "Liquid"
   }'
 ```
 
-**Required:** `tokenAddress`, `newOwner`.
+**Required:** `tokenAddress`, `newOwner`. **Optional:** `launcher` (`Clanker` or `Liquid`, default `Liquid`).
 
 **Response:** `data.rewardRecipientTxHash`, `data.rewardAdminTxHash`, `data.adminTxHash`, `data.newOwner`, `data.tokenAddress`. Show all 3 tx links: `https://basescan.org/tx/{hash}`.
 
@@ -908,15 +918,15 @@ curl -s -X POST "${BASE_URL}/api/orbs/transferOrbOwner" \
 
 ---
 
-## 23. Get Clanker Tokens
+## 23. Get Deployed Tokens (Clanker or Liquid)
 
-**Triggers:** my clanker tokens, list clanker tokens, clanker tokens, my orbs, list orbs, deployed tokens, my tokens
+**Triggers:** my clanker tokens, my liquid tokens, list deployed tokens, my orbs, list orbs, deployed tokens, my tokens
 
-List ALL Clanker V4 tokens associated with the user's wallet. Same endpoint as Get Clanker Rewards (Section 6), but displays every entry — do NOT apply the `> 0` filter.
+List tokens associated with the user's wallet for a given launcher. Same endpoint as Get Token Rewards (Section 6), but displays every entry — do NOT apply the `> 0` filter. Default `launcher=Liquid`; call twice (once per launcher) if the user wants both.
 
 ```bash
-curl -s -X GET "${BASE_URL}/api/wallet/getUncollectedV4Rewards" \
-  -H "Authorization: $AUTH_TOKEN"
+curl -s -X GET "${BASE_URL}/api/wallet/getUncollectedV4Rewards?launcher=Liquid" \
+  -H "x-cap-api-key: $CAP_API_KEY"
 ```
 
 **Response contains:** `data[]` with `tokenAddress`, `tokenSymbol`, `tokenName`, `fee`, `poolId`, `imageUrl`.
