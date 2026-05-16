@@ -1,9 +1,9 @@
 ---
 name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, and manage limit/TWAP orders
-version: 0.30.0
+version: 0.31.0
 author: AndreaPN
-tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner]
+tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner, verify-orb]
 ---
 
 # Capminal - Cap Wallet Integration
@@ -610,7 +610,8 @@ amount       | Yes      | Total amount to distribute (token amount or percentage
 
 ## 18. Check Token Risk (Wadjet)
 
-**Triggers:** check token, token check, rug check, is this safe, token risk, is it a rug, scan token, token safety, token audit, risk check, scam check, analyze token
+**Triggers:** rug check, is this safe, is it a rug, token risk, token safety, token audit, risk check, scam check, holders, holder concentration, top holders, holder distribution, security check, safety check, honeypot check
+**NOT when:** user just wants price / market cap / FDV / general token info (route to Resolve Addresses instead). Wadjet fires only on risk, holders, safety, or security intent.
 
 ### Pre-Check Flow (REQUIRED when user provides symbol instead of address)
 
@@ -938,6 +939,55 @@ Display **all** entries — do not hide zero/empty rewards.
 **Display as table:** `Token | Token Address` (apply Table Format rule)
 
 Row values: `{tokenSymbol}` | `{tokenAddress}` (pad columns using longest value).
+
+---
+
+## 24. Verify Token (Capminal Orbs)
+
+**Triggers:** verify token, verify orb, is this an orb, is this a capminal orb, deployed by capminal, capminal orb check, orb verify, check if orb, was this deployed via capminal
+
+Check whether a token address was deployed via Capminal Orbs (Clanker or Liquid launcher, active or inactive). Returns a simple yes/no.
+
+### Pre-Verify Flow (REQUIRED when user provides symbol instead of address)
+
+If the user provides a **symbol** (e.g. "verify CAP", "is $VIRTUAL a capminal orb?") instead of a `0x...` address:
+
+1. Check **Common Token Addresses** (Reference Tables below) — use that address directly if found.
+2. If not found, **call Resolve Tokens API** (Section 2) to get the address.
+3. If resolve returns no result: ask the user for the contract address directly.
+
+### Execute Verify
+
+```bash
+curl -s -X GET "${BASE_URL}/api/orbs/verifyOrb?tokenAddress=0xabc...abcd" \
+  -H "x-cap-api-key: $CAP_API_KEY"
+```
+
+**Required:** `tokenAddress` (query string).
+
+**Response:** `data.isOrb` (boolean), `data.tokenAddress` (string).
+
+### Response Interpretation
+
+- If `data.isOrb` is `true`: confirm to the user **"Yes — this token was deployed by Capminal Orbs."** Include the token address.
+- If `data.isOrb` is `false`: tell the user **"This token was NOT deployed by Capminal Orbs."**
+- Do not invent extra metadata — this endpoint only returns the boolean.
+
+### Display Format
+
+Short sentence followed by a small table (apply Table Format rule):
+
+```markdown
+| Token Address | Capminal Orb |
+| ------------- | ------------ |
+| {tokenAddress} | Yes / No |
+```
+
+### Examples
+
+- "verify token 0xabc...abcd" → call verify → return yes/no.
+- "is $CAP a capminal orb?" → resolve CAP via Section 2 → verify → return yes/no.
+- "was 0xabc...abcd deployed via capminal?" → call verify → return yes/no.
 
 ---
 
