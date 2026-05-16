@@ -1,7 +1,7 @@
 ---
 name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, and manage limit/TWAP orders
-version: 0.32.0
+version: 0.33.0
 author: AndreaPN
 tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner, verify-orb]
 ---
@@ -267,7 +267,11 @@ See **Reference Tables** for Common Token Addresses. For unknown symbols, use Re
 When user asks to **burn** tokens, this is a transfer to the standard burn address:
 - `toAddress`: `0x000000000000000000000000000000000000dEaD` (see Reference Tables)
 - Follow the same Pre-Transfer flow (check balance, resolve token, validate)
-- **Confirm with user before executing:** "This will permanently burn {amount} {symbol}. Proceed?"
+- **Two-message confirmation (REQUIRED):**
+  1. First message — ask only: "This will permanently burn {amount} {symbol}. Reply 'confirm' to proceed." Do NOT call the transfer endpoint in this turn.
+  2. Wait for the user to send a **separate, subsequent message** with an explicit affirmative ("confirm", "yes", "proceed"). The original burn request does NOT count as confirmation.
+  3. Only on that follow-up message: execute `POST /api/orbs/transfer` with the burn address.
+- If the user replies with anything else (new request, question, ambiguous text), abort the burn and do NOT execute.
 
 ---
 
