@@ -1,7 +1,7 @@
 ---
 name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, and manage limit/TWAP orders
-version: 0.31.0
+version: 0.32.0
 author: AndreaPN
 tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner, verify-orb]
 ---
@@ -608,120 +608,7 @@ amount       | Yes      | Total amount to distribute (token amount or percentage
 
 ---
 
-## 18. Check Token Risk (Wadjet)
-
-**Triggers:** rug check, is this safe, is it a rug, token risk, token safety, token audit, risk check, scam check, holders, holder concentration, top holders, holder distribution, security check, safety check, honeypot check
-**NOT when:** user just wants price / market cap / FDV / general token info (route to Resolve Addresses instead). Wadjet fires only on risk, holders, safety, or security intent.
-
-### Pre-Check Flow (REQUIRED when user provides symbol instead of address)
-
-If user provides a **symbol** (e.g., "check CAP", "is $VIRTUAL safe?") instead of a `0x...` address:
-
-1. Check **Common Token Addresses** (Reference Tables below) — if found, use that address directly
-2. Check wallet balance `data.tokens[].token_address` by matching symbol
-3. If not found in 1 or 2, **call Resolve Tokens API** to get the address:
-
-```bash
-curl -s "${BASE_URL}/api/token/resolve-tokens?symbols=CAP" \
-  -H "x-cap-api-key: $CAP_API_KEY"
-```
-
-Extract `address` from the response, then use it as `token_address` in the Wadjet call below.
-
-4. If resolve returns no result: ask user for the contract address directly
-
-### Execute Check
-
-```bash
-curl -s -X POST "https://wadjet-production.up.railway.app/predict/agent" \
-  -H "Content-Type: application/json" \
-  -d '{"token_address": "0x..."}'
-```
-
-**No authentication needed** — Wadjet API is public. Do NOT set `x-cap-api-key` header for this call.
-
-**Example full flow (symbol → check):**
-1. User: "check CAP" → symbol = CAP
-2. Resolve: `GET ${BASE_URL}/api/token/resolve-tokens?symbols=CAP` → `address: "0xbfa733702305280F066D470afDFA784fA70e2649"`
-3. Check: `POST https://wadjet-production.up.railway.app/predict/agent` with `{"token_address": "0xbfa733702305280F066D470afDFA784fA70e2649"}`
-
-### Response Interpretation
-
-**Primary:** `rug_score` (0–100), `risk_level` (low/medium/high/critical), `behavior_class` (clean/suspicious/malicious), `confidence` (0–1), `summary`.
-
-**Security (`goplus_signals`) — RED FLAGS:**
-
-| Field | Critical if |
-|-------|------------|
-| `is_honeypot` | `true` — users CANNOT sell. **Lead with this warning.** |
-| `is_mintable` | `true` — owner can mint unlimited tokens |
-| `hidden_owner` | `true` — hidden contract ownership |
-| `can_take_back_ownership` | `true` — ownership can be reclaimed |
-| `slippage_modifiable` | `true` — owner can change slippage/tax |
-| `buy_tax` / `sell_tax` | `> 5%` — high taxes |
-| `is_open_source` | `false` — unverified contract |
-| `top10_holder_pct` | `> 0.5` = high concentration risk |
-| `lp_locked_pct` | `< 0.8` = liquidity not secured |
-| `creator_percent` / `owner_percent` | `> 0.05` = insider risk |
-
-**DEX (`dex_signals`):** `price_usd`, `price_change_24h`, `price_change_6h`, `volume_24h`, `liquidity_usd`, `market_cap`, `txns_24h_buys`/`txns_24h_sells`, `base_token`, `dex_id`.
-
-**ACP (`acp_signals`):** `trust_score` (0–100), `completion_rate`, `total_jobs`.
-
-**Risk warnings (`risk_signals[]`):** Array — each has `signal`, `severity` (low/medium/high), `detail`.
-
-### Display Format
-
-**Table 1 — Risk Overview & Security:**
-
-```markdown
-## Token Risk Report: {base_token} (`{token_address}`)
-
-**Risk: {risk_level} ({rug_score}%) | Behavior: {behavior_class} | Confidence: {confidence}**
-
-{summary}
-
-| Signal | Status |
-|--------|--------|
-| Honeypot | {is_honeypot} |
-| Mintable | {is_mintable} |
-| Hidden Owner | {hidden_owner} |
-| Open Source | {is_open_source} |
-| Buy Tax | {buy_tax}% |
-| Sell Tax | {sell_tax}% |
-| LP Locked | {lp_locked_pct * 100}% |
-| Top 10 Holders | {top10_holder_pct * 100}% |
-| Holders | {holder_count} |
-```
-
-**Table 2 — Market Data:**
-
-```markdown
-| Metric | Value |
-|--------|-------|
-| Price | ${price_usd} |
-| 24h Change | {price_change_24h}% |
-| Volume 24h | ${volume_24h} |
-| Liquidity | ${liquidity_usd} |
-| Market Cap | ${market_cap} |
-| Buys/Sells 24h | {txns_24h_buys}/{txns_24h_sells} |
-| DEX | {dex_id} |
-```
-
-Then list `risk_signals[]`: `- **[{severity}]** {signal}: {detail}`
-
-End with: `> This is an automated risk assessment, not financial advice. Always DYOR.`
-
-### Rules
-
-- If `is_honeypot` is `true`: **lead with HONEYPOT WARNING** before all other data
-- If `risk_level` is `high` or `critical`: use strong warning language
-- Never recommend buying or selling based solely on the risk check
-- If Wadjet API errors or is unreachable: inform user the risk check service is temporarily unavailable
-
----
-
-## 19. Discover x402 API
+## 18. Discover x402 API
 
 **Triggers:** discover x402, investigate x402, inspect x402, discover api, investigate api, x402 + URL
 
@@ -769,7 +656,7 @@ curl -s -X GET "${BASE_URL}/api/actions/x402/discover?apiUrl=https://example.com
 
 ---
 
-## 20. Call x402 API
+## 19. Call x402 API
 
 **Triggers:** call x402, execute x402, call x402 api, execute x402 api
 
@@ -832,7 +719,7 @@ Look for params after `params:` keyword:
 
 ---
 
-## 21. Update Slippage
+## 20. Update Slippage
 
 **Triggers:** update slippage, set slippage, change slippage, slippage tolerance, slippage bps, configure slippage
 
@@ -869,7 +756,7 @@ curl -s -X POST "${BASE_URL}/api/wallet/updateSlippageBps" \
 
 ---
 
-## 22. Transfer Orb Ownership
+## 21. Transfer Orb Ownership
 
 **Triggers:** transfer owner, transfer ownership, change owner, transfer orb owner, hand over orb, give orb to
 
@@ -919,7 +806,7 @@ curl -s -X POST "${BASE_URL}/api/orbs/transferOrbOwner" \
 
 ---
 
-## 23. Get Deployed Tokens (Clanker or Liquid)
+## 22. Get Deployed Tokens (Clanker or Liquid)
 
 **Triggers:** my clanker tokens, my liquid tokens, list deployed tokens, my orbs, list orbs, deployed tokens, my tokens
 
@@ -942,7 +829,7 @@ Row values: `{tokenSymbol}` | `{tokenAddress}` (pad columns using longest value)
 
 ---
 
-## 24. Verify Token (Capminal Orbs)
+## 23. Verify Token (Capminal Orbs)
 
 **Triggers:** verify token, verify orb, is this an orb, is this a capminal orb, deployed by capminal, capminal orb check, orb verify, check if orb, was this deployed via capminal
 
@@ -969,13 +856,13 @@ curl -s -X GET "${BASE_URL}/api/orbs/verifyOrb?tokenAddress=0xabc...abcd" \
 
 ### Response Interpretation
 
-- If `data.isOrb` is `true`: confirm to the user **"Yes — this token was deployed by Capminal Orbs."** Include the token address.
-- If `data.isOrb` is `false`: tell the user **"This token was NOT deployed by Capminal Orbs."**
+- If `data.isOrb` is `true`: confirm to the user **"Yes — this token was deployed by Capminal Orbs."** Include the token address AND the orb detail link `https://www.capminal.ai/base/{tokenAddress}`.
+- If `data.isOrb` is `false`: tell the user **"This token was NOT deployed by Capminal Orbs."** Do NOT include the capminal.ai link.
 - Do not invent extra metadata — this endpoint only returns the boolean.
 
 ### Display Format
 
-Short sentence followed by a small table (apply Table Format rule):
+Short sentence followed by a small table (apply Table Format rule). When `isOrb` is `true`, append the orb detail link `https://www.capminal.ai/base/{tokenAddress}` after the table.
 
 ```markdown
 | Token Address | Capminal Orb |
