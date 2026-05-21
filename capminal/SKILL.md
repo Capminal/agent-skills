@@ -1,7 +1,7 @@
 ---
 name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, and manage limit/TWAP orders
-version: 0.33.0
+version: 0.33.1
 author: AndreaPN
 tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner, verify-orb]
 ---
@@ -740,7 +740,7 @@ Update the user's swap slippage tolerance in basis points (bps). 100 bps = 1%. R
 
 ```bash
 curl -s -X POST "${BASE_URL}/api/wallet/updateSlippageBps" \
-  -H "Authorization: $AUTH_TOKEN" \
+  -H "x-cap-api-key: $CAP_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "slippageBps": 100

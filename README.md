@@ -1,10 +1,10 @@
-# OpenClaw Skills
+# Agent Skills
 
-A community-driven collection of skills for [OpenClaw](https://openclaw.ai) agents.
+A community-driven collection of skills for AI agents.
 
 ## What are Skills?
 
-Skills are modular abilities that teach OpenClaw agents new capabilities. Each skill contains:
+Skills are modular abilities that teach AI agents new capabilities. Each skill contains:
 - `SKILL.md` - Instructions and API documentation for agents
 - `_meta.json` - Skill metadata
 
@@ -16,15 +16,10 @@ Skills are modular abilities that teach OpenClaw agents new capabilities. Each s
 
 ## Installation
 
-### Via OpenClaw Chat
-```
-install this skill: https://github.com/Capminal/openclaw-skills/tree/main/capminal
-```
-
 ### Manual Installation
 ```bash
-git clone https://github.com/Capminal/openclaw-skills.git
-cp -r openclaw-skills/capminal ~/.openclaw/skills/
+git clone https://github.com/Capminal/agent-skills.git
+cp -r agent-skills/capminal ~/.agents/skills/
 ```
 
 ## Contributing
@@ -109,12 +104,6 @@ How to handle common errors.
 - Ask users for missing credentials
 - Test your skill before submitting
 
-## License
-
-MIT License - See [LICENSE](./LICENSE) for details.
-
 ## Links
 
-- [Capminal](https://www.capminal.ai/)
-- [OpenClaw Documentation](https://openclaw.ai/docs)
-- [ClawHub Marketplace](https://www.clawhub.ai/skills)
+- [Link3](https://link3.to/capminal)
