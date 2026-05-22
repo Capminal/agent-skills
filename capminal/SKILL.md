@@ -1,7 +1,7 @@
 ---
 name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, and manage limit/TWAP orders
-version: 0.33.1
+version: 0.34.0
 author: AndreaPN
 tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner, verify-orb]
 ---
@@ -229,6 +229,12 @@ See **Reference Tables** at the bottom for Common Token Addresses.
 - **"Buy $50 of VIRTUAL"** → calculate ETH amount: 50 / eth_usd_price → sellToken=ETH, buyToken=VIRTUAL address, sellAmount=calculated
 - **"Sell 50% of my VIRTUAL for ETH"** → sellToken=VIRTUAL address (from balance), buyToken=ETH address, sellAmount="50%"
 - **"Swap $200 of ETH to USDC"** → ETH usd_price from balance → sellAmount = 200 / eth_usd_price → sellToken=ETH, buyToken=USDC address
+
+### Handling "sell all" / max amount
+
+When user asks to sell ALL of a token:
+- Use `sellAmount: "100%"` — the API supports percentage amounts
+- Do NOT copy the balance number manually — precision loss will cause "insufficient balance" errors
 
 ---
 
@@ -614,22 +620,20 @@ amount       | Yes      | Total amount to distribute (token amount or percentage
 
 ## 18. Discover x402 API
 
-**Triggers:** discover x402, investigate x402, inspect x402, discover api, investigate api, x402 + URL
+**Triggers:** discover x402, investigate x402, inspect x402, what x402, x402 info, discover api, investigate api, x402 + URL
 
 Discover information about an x402-enabled API endpoint (pricing, supported methods, payment details) before calling it.
 
 ### Pre-Discovery Validation
 
-User message MUST contain BOTH:
-1. A discovery keyword: `discover`, `investigate`, `inspect`
-2. A valid HTTPS URL (starting with `https://`)
-
-If either is missing, ask user to provide the complete command with URL.
+- A discovery keyword is required: `discover`, `investigate`, `inspect`, `what x402`, `x402 info`
+- User MUST provide a valid HTTPS URL (starting with `https://`)
+- If no URL provided, reply: "Please specify the x402 API URL you want to discover (must start with `https://`)." Do NOT proceed.
 
 ### Execute Discovery
 
 ```bash
-curl -s -X GET "${BASE_URL}/api/actions/x402/discover?apiUrl=https://example.com/api/x402/endpoint" \
+curl -s -X GET "${BASE_URL}/api/actions/x402/discover?apiUrl=https://www.capminal.ai/api/x402/research" \
   -H "x-cap-api-key: $CAP_API_KEY"
 ```
 
@@ -641,22 +645,18 @@ curl -s -X GET "${BASE_URL}/api/actions/x402/discover?apiUrl=https://example.com
 
 ### URL Extraction Rules
 
-- Extract HTTPS URL from user message
+- Extract HTTPS URL from user message (must start with `https://`)
+- Extract complete URL including path and query parameters
 - Common patterns:
   - "discover x402 api https://..."
   - "investigate api https://..."
-  - "discover https://..."
   - "x402 https://..."
-- URL must start with `https://`
-- Extract complete URL including path and query parameters
 - Only process the latest message
 
 ### Examples
 
 - "discover x402 api https://www.capminal.ai/api/x402/research" → `apiUrl=https://www.capminal.ai/api/x402/research`
-- "investigate x402 api https://pay.x402monopoly.com/api/x402/payment/player_to_player" → extract full URL
-- "investigate api https://example.com/api/endpoint" → extract URL after "api"
-- "inspect x402 https://api.example.com/x402/resource" → extract URL
+- "discover x402" → reply asking user to provide the URL
 
 ---
 
@@ -844,8 +844,9 @@ Check whether a token address was deployed via Capminal Orbs (Clanker or Liquid 
 If the user provides a **symbol** (e.g. "verify CAP", "is $VIRTUAL a capminal orb?") instead of a `0x...` address:
 
 1. Check **Common Token Addresses** (Reference Tables below) — use that address directly if found.
-2. If not found, **call Resolve Tokens API** (Section 2) to get the address.
-3. If resolve returns no result: ask the user for the contract address directly.
+2. Check wallet balance `data.tokens[].token_address` by matching symbol.
+3. If not found, **call Resolve Tokens API** (Section 2) to get the address.
+4. If resolve returns no result: ask the user for the contract address directly.
 
 ### Execute Verify
 
