@@ -1,7 +1,7 @@
 ---
 name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, and manage limit/TWAP orders
-version: 0.35.0
+version: 0.35.1
 author: AndreaPN
 tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner, verify-orb]
 ---
@@ -39,6 +39,24 @@ Before any request, resolve `CAP_API_KEY`:
 - Always wait for complete API response before answering
 - On 401: ask user to update key. On 429: wait and retry
 - **URL query strings: use raw `&` as separator — NEVER HTML-encode it as `&amp;`.** Multi-param URLs must be exactly `?a=1&b=2`, not `?a=1&amp;b=2`.
+- **On ANY write-action failure (Swap, Deploy, Transfer, Stake, Unstake, Claim Rewards, Reward CAP Guild):** the API returns `{ "success": false, "message": "...", "error": "..." }` or a non-2xx status. You MUST:
+  1. NEVER post the success template for that action.
+  2. NEVER fabricate a `transactionHash`, `tokenAddress`, `preLaunchTxHash`, `poolId`, basescan URL, or `capminal.ai/base/...` URL on a failure path.
+  3. Reply with a short, plain-text, human-readable summary derived from `message`/`error`, mapped through the table below. Under 2000 chars, no markdown, no URLs.
+  4. NEVER expose raw stack traces, viem error names, RPC URLs, contract addresses, function selectors, or hex calldata in the reply.
+
+  **Failure-message mapping (apply to all write actions):**
+
+  | Backend error contains | Reply with |
+  | --- | --- |
+  | `Insufficient ETH for gas` | "Action failed — your wallet needs ETH on Base for gas. Please fund the wallet and try again." |
+  | `Insufficient VIRTUAL` / `Insufficient ... balance` | "Action failed — not enough {token} in your wallet." |
+  | `Daily ... deploy limit reached` / `Daily ... limit` | "Daily deploy limit reached. Try again after 00:00 UTC." |
+  | `User does not have a private key` / `User not found` | "Your wallet isn't ready yet. Connect or create a Capminal wallet first." |
+  | `Recipient not found` | "Recipient not found on Twitter — double-check the username or use a 0x address." |
+  | `Failed to approve` | "Action failed at the approve step. Please try again." |
+  | `Return amount is not enough` / `Slippage` / slippage-related | "Trade failed — price moved past your slippage. Try again or raise slippage." |
+  | Anything else | "Action failed — please try again later." |
 
 ### Table Format (REQUIRED)
 
