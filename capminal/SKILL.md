@@ -1,7 +1,7 @@
 ---
 name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, and manage limit/TWAP orders
-version: 0.34.0
+version: 0.35.0
 author: AndreaPN
 tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner, verify-orb]
 ---
@@ -128,13 +128,19 @@ curl -s "${BASE_URL}/api/token/resolve-balance?addresses=0xabc...,0xdef..." \
 
 ---
 
-## 3. Deploy Token (Clanker or Liquid)
+## 3. Deploy Token (Clanker, Liquid, or Virtuals)
 
-**Triggers:** deploy token, create token, launch token, clanker, liquid, orb
+**Triggers:** deploy token, create token, launch token, clanker, liquid, virtuals, virtual, orb
 
-Deploy a token via the Clanker or Liquid launcher. Both share the same ABI/factory shape; the `launcher` field picks which protocol's contracts to use. Default `Liquid`.
+Deploy a token via one of three launcher protocols. A single endpoint dispatches by the `launcher` field. Default `Liquid`.
 
-### Execute Deploy
+| Launcher | Protocol | Initial buy token | Notes |
+| -------- | -------- | ----------------- | ----- |
+| `Liquid` (default) | Liquid Protocol (Clanker V4) | ETH | Hooked Uniswap V4 pool |
+| `Clanker` | Clanker V4 | ETH | Hooked Uniswap V4 pool |
+| `Virtuals` | Virtuals Protocol (BondingV5) | VIRTUAL | preLaunch → indexer bot auto-launches in ~60s |
+
+### Execute Deploy — Clanker / Liquid
 
 ```bash
 curl -s -X POST "${BASE_URL}/api/orbs/createOrb" \
@@ -152,14 +158,62 @@ curl -s -X POST "${BASE_URL}/api/orbs/createOrb" \
 
 **Required:** `name`, `symbol`. **Defaults:** `fee`="1", `marketCap`="10E", `initialBuyAmount`="0", `launcher`="Liquid".
 
-**Optional:** `description`, `imageUrl`, `secondsToDecay`, `telegramLink`, `twitterLink`, `farcasterLink`, `websiteLink`, `launcher` (`Clanker` or `Liquid`, default `Liquid`).
+**Clanker/Liquid optional:** `description`, `imageUrl`, `secondsToDecay`, `telegramLink`, `twitterLink`, `farcasterLink`, `websiteLink`.
 
-**Image handling:** If the user wants a token image, they must provide a public HTTPS URL (e.g., hosted on Imgur, Cloudflare, etc.). Pass it as `imageUrl` in the request body. If user sends an image attachment without providing a URL in text, ask them to upload it to a hosting service and share the direct link.
+### Execute Deploy — Virtuals
 
-**Response:** `data.transactionHash`, `data.poolId`, `data.tokenAddress`. Show 2 orb detail links:
+```bash
+curl -s -X POST "${BASE_URL}/api/orbs/createOrb" \
+  -H "x-cap-api-key: $CAP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My Agent",
+    "symbol": "AGT",
+    "launcher": "Virtuals",
+    "description": "An autonomous trading agent",
+    "feeRecipient": "@Capminal"
+  }'
+```
+
+**Required (Virtuals):** `name`, `symbol`, `launcher: "Virtuals"`.
+
+**Virtuals optional:** `description`, `imageUrl`, `websiteLink`, `twitterLink`, `telegramLink`, `youtubeLink`, `cores` (integer array, default `[2,3,5]`), `purchaseAmount` (string, default `"0"` — backend auto-bumps to on-chain launchFee if lower; user pays in VIRTUAL).
+
+**Fields ignored when `launcher="Virtuals"`:** `fee`, `marketCap`, `initialBuyAmount`, `secondsToDecay`, `farcasterLink` (BondingV5 has fixed bonding-curve params; no Farcaster slot on-chain).
+
+### `feeRecipient` parameter (all launchers)
+
+Optional. **Default = `null` (omit the field entirely).** Only include `feeRecipient` if the user **explicitly** mentions a fee recipient / fee handler / fee transfer in their prompt. Do NOT prompt the user for it, do NOT default it to yourself, do NOT guess.
+
+When the user does specify one, accept either:
+- `0x` EVM address (40 hex chars) — e.g. `"feeRecipient": "0xabc...1234"`, OR
+- X (Twitter) handle (≤15 alphanumeric, `@` prefix optional) — e.g. `"feeRecipient": "@Capminal"` or `"feeRecipient": "Capminal"`.
+
+If provided, the deployer pays for launch + initial buy, then ownership is **auto-transferred** to this recipient right after deploy. If transfer fails, the deploy still succeeds and `feeRecipientTransferError` is set. Leave empty to keep yourself as creator.
+
+**NLU mapping examples:**
+- "fee is on @Capminal" → `feeRecipient: "@Capminal"`
+- "fee recipient is 0xabc...1234" → `feeRecipient: "0xabc...1234"`
+- "transfer fee to @Capminal" → `feeRecipient: "@Capminal"`
+- "send fees to alice" → `feeRecipient: "alice"`
+
+### Image handling
+
+If the user wants a token image, they must provide a public HTTPS URL (Imgur, Cloudflare, etc.). Pass it as `imageUrl` in the request body. If user sends an image attachment without providing a URL in text, ask them to upload it to a hosting service and share the direct link.
+
+### Response
+
+**Clanker / Liquid:** `data.transactionHash`, `data.poolId`, `data.tokenAddress`.
+**Virtuals:** `data.preLaunchTxHash`, `data.tokenAddress`, `data.pairAddress`, `data.virtualId`, `data.prototypeUrl`.
+**All launchers:** `data.feeRecipientTransfer` (object or `null`), `data.feeRecipientTransferError` (string or `null`).
+
+Show orb detail links:
 - Always: `https://www.capminal.ai/base/{tokenAddress}`
 - If `launcher` is `Liquid` (or omitted): `https://app.liquidprotocol.org/tokens/{tokenAddress}`
 - If `launcher` is `Clanker`: `https://www.clanker.world/clanker/{tokenAddress}`
+- If `launcher` is `Virtuals`: `{prototypeUrl}` from response.
+
+If `feeRecipientTransfer` is non-null, also note: "Ownership auto-transferred to {newOwner}." If `feeRecipientTransferError` is set, warn: "Deploy succeeded but ownership transfer failed: {error}. You can retry manually via Transfer Orb Ownership."
 
 ---
 
@@ -764,16 +818,24 @@ curl -s -X POST "${BASE_URL}/api/wallet/updateSlippageBps" \
 
 **Triggers:** transfer owner, transfer ownership, change owner, transfer orb owner, hand over orb, give orb to
 
-Transfer all 3 ownership roles (reward recipient, reward admin, admin) of a Clanker or Liquid orb to a new owner address. **Caller must currently be the owner — otherwise the API returns 403.** The on-chain calls hit the launcher's fee-conversion locker, so `launcher` must match the launcher that originally deployed the token. If unknown, read `gemSource` from `GET /api/orbs/market/{tokenAddress}` — it returns `Clanker` or `Liquid`.
+Transfer ownership of an orb to a new wallet. The single endpoint dispatches by `launcher`:
+
+| Launcher | What gets transferred | # txs |
+| -------- | --------------------- | ----- |
+| `Liquid` (default) | reward recipient + reward admin + admin (locker) | 3 |
+| `Clanker` | reward recipient + reward admin + admin (locker) | 3 |
+| `Virtuals` | AgentTaxV2 creator (fee recipient on BondingV5) | 1 |
+
+**Caller must currently be the owner — otherwise the API returns 403.** `launcher` must match the protocol that originally deployed the token. If unknown, read `gemSource` from `GET /api/orbs/market/{tokenAddress}` — it returns `Clanker`, `Liquid`, or `Virtuals`.
 
 ### Pre-Transfer Validation (REQUIRED)
 
-- `tokenAddress` MUST be a valid `0x...` Clanker or Liquid token address (40 hex chars after `0x`). If user gives a symbol, resolve it via Resolve Tokens API first (Section 2).
-- `newOwner` MUST be a valid `0x...` EVM address. ENS (`*.eth`) and `@handles` are NOT accepted by this endpoint.
-- Reject if either address is malformed.
-- **Confirm with user before executing:** "This will transfer reward recipient, reward admin, and admin of {tokenAddress} to {newOwner}. This is irreversible by you — only the new owner can transfer it back. Proceed?"
+- `tokenAddress` MUST be a valid `0x...` token address (40 hex chars after `0x`). If user gives a symbol, resolve it via Resolve Tokens API first (Section 2).
+- Provide exactly one of `newOwner` (`0x` EVM address) OR `xHandle` (X username without `@`, 1–15 alphanumeric/underscore). ENS (`*.eth`) is NOT accepted.
+- Reject if neither/both are given or address is malformed.
+- **Confirm with user before executing:** "This will transfer ownership of {tokenAddress} ({launcher}) to {newOwner|@xHandle}. This is irreversible by you — only the new owner can transfer it back. Proceed?"
 
-### Execute Transfer
+### Execute Transfer — Clanker / Liquid
 
 ```bash
 curl -s -X POST "${BASE_URL}/api/orbs/transferOrbOwner" \
@@ -786,17 +848,39 @@ curl -s -X POST "${BASE_URL}/api/orbs/transferOrbOwner" \
   }'
 ```
 
-**Required:** `tokenAddress`, `newOwner`. **Optional:** `launcher` (`Clanker` or `Liquid`, default `Liquid`).
+### Execute Transfer — Virtuals
 
-**Response:** `data.rewardRecipientTxHash`, `data.rewardAdminTxHash`, `data.adminTxHash`, `data.newOwner`, `data.tokenAddress`. Show all 3 tx links: `https://basescan.org/tx/{hash}`.
+```bash
+curl -s -X POST "${BASE_URL}/api/orbs/transferOrbOwner" \
+  -H "x-cap-api-key: $CAP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tokenAddress": "0xabc...abcd",
+    "xHandle": "Capminal",
+    "launcher": "Virtuals"
+  }'
+```
 
-**Display as table:** `Role | Tx Hash`
+**Required:** `tokenAddress`, and exactly one of (`newOwner` | `xHandle`).
+**Optional:** `launcher` (`Clanker` | `Liquid` | `Virtuals`, default `Liquid`).
+
+**Response — Clanker/Liquid:** `data.rewardRecipientTxHash`, `data.rewardAdminTxHash`, `data.adminTxHash`, `data.newOwner`, `data.tokenAddress`. Show all 3 tx links: `https://basescan.org/tx/{hash}`.
+
+**Response — Virtuals:** `data.updateCreatorTxHash`, `data.newOwner`, `data.tokenAddress`. Show 1 tx link.
+
+**Display as table — Clanker / Liquid:**
 
 | Role | Tx Hash |
 | ---- | ------- |
 | Reward Recipient | {rewardRecipientTxHash} |
 | Reward Admin | {rewardAdminTxHash} |
 | Admin | {adminTxHash} |
+
+**Display as table — Virtuals:**
+
+| Role | Tx Hash |
+| ---- | ------- |
+| Creator (AgentTaxV2) | {updateCreatorTxHash} |
 
 ### Error Handling
 
@@ -805,7 +889,8 @@ curl -s -X POST "${BASE_URL}/api/orbs/transferOrbOwner" \
 
 ### Examples
 
-- "Transfer owner of token 0xabc...abcd to 0xa12...1234" → `tokenAddress: 0xabc...abcd`, `newOwner: 0xa12...1234`
+- "Transfer owner of token 0xabc...abcd to 0xa12...1234" → `tokenAddress`, `newOwner`, `launcher` from market lookup.
+- "Transfer my Virtuals agent 0xabc... to @bob" → `tokenAddress`, `xHandle: "bob"`, `launcher: "Virtuals"`.
 - "Transfer my CAP orb ownership to 0xa12...1234" → resolve CAP via Resolve Tokens first, then call with resolved address.
 
 ---
