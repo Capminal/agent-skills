@@ -1,9 +1,9 @@
 ---
 name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, and manage limit/TWAP orders
-version: 0.35.1
+version: 0.36.0
 author: AndreaPN
-tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, staking, cap-guild, slippage, transfer-owner, verify-orb]
+tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, cap-guild, slippage, transfer-owner, verify-orb]
 ---
 
 # Capminal - Cap Wallet Integration
@@ -39,7 +39,7 @@ Before any request, resolve `CAP_API_KEY`:
 - Always wait for complete API response before answering
 - On 401: ask user to update key. On 429: wait and retry
 - **URL query strings: use raw `&` as separator — NEVER HTML-encode it as `&amp;`.** Multi-param URLs must be exactly `?a=1&b=2`, not `?a=1&amp;b=2`.
-- **On ANY write-action failure (Swap, Deploy, Transfer, Stake, Unstake, Claim Rewards, Reward CAP Guild):** the API returns `{ "success": false, "message": "...", "error": "..." }` or a non-2xx status. You MUST:
+- **On ANY write-action failure (Swap, Deploy, Transfer, Claim Rewards, Reward CAP Guild):** the API returns `{ "success": false, "message": "...", "error": "..." }` or a non-2xx status. You MUST:
   1. NEVER post the success template for that action.
   2. NEVER fabricate a `transactionHash`, `tokenAddress`, `preLaunchTxHash`, `poolId`, basescan URL, or `capminal.ai/base/...` URL on a failure path.
   3. Reply with a short, plain-text, human-readable summary derived from `message`/`error`, mapped through the table below. Under 2000 chars, no markdown, no URLs.
@@ -67,7 +67,7 @@ For table outputs, always return in standard markdown table format:
 | Row 1a | Row 1b | ... | Row 1n |
 ```
 
-## Pre-Action Checklist (applies to ALL write actions: Trade, Transfer, Deploy, Stake, Unstake, Reward)
+## Pre-Action Checklist (applies to ALL write actions: Trade, Transfer, Deploy, Reward)
 
 Before ANY action that moves tokens, ALWAYS:
 1. **Check wallet balance** — call Get Wallet Balance endpoint
@@ -572,84 +572,7 @@ Replace `123` with TWAP order id.
 
 ---
 
-## 14. Get Stake Position
-
-**Triggers:** stake position, staking info, my stake, staked amount, staking balance, how much staked
-
-```bash
-curl -s -X GET "${BASE_URL}/api/staking/get" \
-  -H "x-cap-api-key: $CAP_API_KEY"
-```
-
-**Response contains:** `data.amount` (staked token amount), `data.shares` (number of shares), `data.lockWeeks` (lock duration in weeks), `data.unlockTime` (unlock timestamp).
-
-**Display as table:** `Amount Staked | Shares | Lock Duration | Unlock Time` (apply Table Format rule)
-
----
-
-## 15. Stake CAP Token
-
-**Triggers:** stake cap, stake tokens, lock cap, deposit stake, stake cap token
-
-### Pre-Stake Check (REQUIRED)
-
-Follow **Pre-Action Checklist** above — verify CAP token balance is sufficient. If insufficient: inform user of current CAP balance and stop.
-
-### Execute Stake
-
-```bash
-curl -s -X POST "${BASE_URL}/api/staking/stake" \
-  -H "x-cap-api-key: $CAP_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": "100",
-    "lockWeeks": 4
-  }'
-```
-
-**Required:** `amount` (token amount to stake), `lockWeeks` (integer, 1–96).
-
-- `lockWeeks` must be between **1 and 96** weeks.
-- If user does not specify lock duration, ask before proceeding — do NOT default silently.
-
-**Response:** `data.transactionHash`, `data.amount`, `data.lockWeeks`. Show tx link: `https://basescan.org/tx/{hash}`
-
----
-
-## 16. Unstake CAP Token
-
-**Triggers:** unstake cap, unstake tokens, withdraw stake, claim stake, unlock cap
-
-### Pre-Unstake Check (REQUIRED)
-
-Before unstaking, ALWAYS call **Get Stake Position** first:
-
-```bash
-curl -s -X GET "${BASE_URL}/api/staking/get" \
-  -H "x-cap-api-key: $CAP_API_KEY"
-```
-
-- Check `data.unlockTime` — if the lock period has NOT expired, warn user: "Your stake is still locked until {unlockTime}. Unstaking before expiry may fail or incur penalties."
-- If `data.amount` is `"0"` or empty: tell user there is no active stake and stop.
-
-### Execute Unstake
-
-```bash
-curl -s -X POST "${BASE_URL}/api/staking/unstake" \
-  -H "x-cap-api-key: $CAP_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": "100"
-  }'
-```
-
-**Required:** `amount` (token amount to unstake).
-
-**Response:** `data.transactionHash`, `data.amount`. Show tx link: `https://basescan.org/tx/{hash}`
-
----
-
-## 17. Reward CAP Guild
+## 14. Reward CAP Guild
 
 **Triggers:** reward cap guild, distribute to guild, guild reward, airdrop guild
 
@@ -690,7 +613,7 @@ amount       | Yes      | Total amount to distribute (token amount or percentage
 
 ---
 
-## 18. Discover x402 API
+## 15. Discover x402 API
 
 **Triggers:** discover x402, investigate x402, inspect x402, what x402, x402 info, discover api, investigate api, x402 + URL
 
@@ -732,7 +655,7 @@ curl -s -X GET "${BASE_URL}/api/actions/x402/discover?apiUrl=https://www.capmina
 
 ---
 
-## 19. Call x402 API
+## 16. Call x402 API
 
 **Triggers:** call x402, execute x402, call x402 api, execute x402 api
 
@@ -795,7 +718,7 @@ Look for params after `params:` keyword:
 
 ---
 
-## 20. Update Slippage
+## 17. Update Slippage
 
 **Triggers:** update slippage, set slippage, change slippage, slippage tolerance, slippage bps, configure slippage
 
@@ -832,7 +755,7 @@ curl -s -X POST "${BASE_URL}/api/wallet/updateSlippageBps" \
 
 ---
 
-## 21. Transfer Orb Ownership
+## 18. Transfer Orb Ownership
 
 **Triggers:** transfer owner, transfer ownership, change owner, transfer orb owner, hand over orb, give orb to
 
@@ -913,7 +836,7 @@ curl -s -X POST "${BASE_URL}/api/orbs/transferOrbOwner" \
 
 ---
 
-## 22. Get Deployed Tokens (Clanker or Liquid)
+## 19. Get Deployed Tokens (Clanker or Liquid)
 
 **Triggers:** my clanker tokens, my liquid tokens, list deployed tokens, my orbs, list orbs, deployed tokens, my tokens
 
@@ -936,7 +859,7 @@ Row values: `{tokenSymbol}` | `{tokenAddress}` (pad columns using longest value)
 
 ---
 
-## 23. Verify Token (Capminal Orbs)
+## 20. Verify Token (Capminal Orbs)
 
 **Triggers:** verify token, verify orb, is this an orb, is this a capminal orb, deployed by capminal, capminal orb check, orb verify, check if orb, was this deployed via capminal
 
