@@ -3,7 +3,7 @@ name: cap-skill
 description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, and manage limit/TWAP orders
 version: 0.36.0
 author: AndreaPN
-tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, cap-guild, slippage, transfer-owner, verify-orb]
+tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, slippage, transfer-owner, verify-orb]
 ---
 
 # Capminal - Cap Wallet Integration
@@ -39,7 +39,7 @@ Before any request, resolve `CAP_API_KEY`:
 - Always wait for complete API response before answering
 - On 401: ask user to update key. On 429: wait and retry
 - **URL query strings: use raw `&` as separator — NEVER HTML-encode it as `&amp;`.** Multi-param URLs must be exactly `?a=1&b=2`, not `?a=1&amp;b=2`.
-- **On ANY write-action failure (Swap, Deploy, Transfer, Claim Rewards, Reward CAP Guild):** the API returns `{ "success": false, "message": "...", "error": "..." }` or a non-2xx status. You MUST:
+- **On ANY write-action failure (Swap, Deploy, Transfer, Claim Rewards):** the API returns `{ "success": false, "message": "...", "error": "..." }` or a non-2xx status. You MUST:
   1. NEVER post the success template for that action.
   2. NEVER fabricate a `transactionHash`, `tokenAddress`, `preLaunchTxHash`, `poolId`, basescan URL, or `capminal.ai/base/...` URL on a failure path.
   3. Reply with a short, plain-text, human-readable summary derived from `message`/`error`, mapped through the table below. Under 2000 chars, no markdown, no URLs.
@@ -67,7 +67,7 @@ For table outputs, always return in standard markdown table format:
 | Row 1a | Row 1b | ... | Row 1n |
 ```
 
-## Pre-Action Checklist (applies to ALL write actions: Trade, Transfer, Deploy, Reward)
+## Pre-Action Checklist (applies to ALL write actions: Trade, Transfer, Deploy)
 
 Before ANY action that moves tokens, ALWAYS:
 1. **Check wallet balance** — call Get Wallet Balance endpoint
@@ -572,48 +572,7 @@ Replace `123` with TWAP order id.
 
 ---
 
-## 14. Reward CAP Guild
-
-**Triggers:** reward cap guild, distribute to guild, guild reward, airdrop guild
-
-Distribute tokens to all CAP Guild members proportionally based on their total points.
-
-### Pre-Reward Flow (REQUIRED)
-
-Follow **Pre-Action Checklist** above (check balance → resolve token → validate).
-
-If still insufficient, fall back: **resolve balance → resolve token → validate**. Only inform the user after this re-check still fails.
-
-### Execute Reward
-
-```bash
-curl -s -X POST "${BASE_URL}/api/wallet/rewardCapXP" \
-  -H "x-cap-api-key: $CAP_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "chainId": "8453",
-    "tokenAddress": "0x...",
-    "amount": "1000"
-  }'
-```
-
-**Required:** `chainId`, `tokenAddress`, `amount`.
-
-**Parameters:**
-```text
-Parameter    | Required | Description
-chainId      | Yes      | Chain ID (string, e.g. "8453")
-tokenAddress | Yes      | Token address to distribute (use 0x0000000000000000000000000000000000000000 for ETH)
-amount       | Yes      | Total amount to distribute (token amount or percentage like "50%")
-```
-
-**Display as table:** `Transaction Hash | Amount | Token` (apply Table Format rule)
-
-**Response:** `data.transactionHash`. Show tx link: `https://basescan.org/tx/{hash}`
-
----
-
-## 15. Discover x402 API
+## 14. Discover x402 API
 
 **Triggers:** discover x402, investigate x402, inspect x402, what x402, x402 info, discover api, investigate api, x402 + URL
 
@@ -655,7 +614,7 @@ curl -s -X GET "${BASE_URL}/api/actions/x402/discover?apiUrl=https://www.capmina
 
 ---
 
-## 16. Call x402 API
+## 15. Call x402 API
 
 **Triggers:** call x402, execute x402, call x402 api, execute x402 api
 
@@ -718,7 +677,7 @@ Look for params after `params:` keyword:
 
 ---
 
-## 17. Update Slippage
+## 16. Update Slippage
 
 **Triggers:** update slippage, set slippage, change slippage, slippage tolerance, slippage bps, configure slippage
 
@@ -755,7 +714,7 @@ curl -s -X POST "${BASE_URL}/api/wallet/updateSlippageBps" \
 
 ---
 
-## 18. Transfer Orb Ownership
+## 17. Transfer Orb Ownership
 
 **Triggers:** transfer owner, transfer ownership, change owner, transfer orb owner, hand over orb, give orb to
 
@@ -836,7 +795,7 @@ curl -s -X POST "${BASE_URL}/api/orbs/transferOrbOwner" \
 
 ---
 
-## 19. Get Deployed Tokens (Clanker or Liquid)
+## 18. Get Deployed Tokens (Clanker or Liquid)
 
 **Triggers:** my clanker tokens, my liquid tokens, list deployed tokens, my orbs, list orbs, deployed tokens, my tokens
 
@@ -859,7 +818,7 @@ Row values: `{tokenSymbol}` | `{tokenAddress}` (pad columns using longest value)
 
 ---
 
-## 20. Verify Token (Capminal Orbs)
+## 19. Verify Token (Capminal Orbs)
 
 **Triggers:** verify token, verify orb, is this an orb, is this a capminal orb, deployed by capminal, capminal orb check, orb verify, check if orb, was this deployed via capminal
 
