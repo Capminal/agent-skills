@@ -1,9 +1,11 @@
 ---
 name: cap-skill
-description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, and manage limit/TWAP orders
+description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, manage limit/TWAP orders, and discover/call x402 APIs
 version: 0.36.0
 author: AndreaPN
-tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, slippage, transfer-owner, verify-orb]
+tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, x402, slippage, transfer-owner, verify-orb]
+allowed-actions: [http_request]
+memory-keys: [last-trade, last-deploy]
 ---
 
 # Capminal - Cap Wallet Integration
@@ -170,11 +172,12 @@ curl -s -X POST "${BASE_URL}/api/orbs/createOrb" \
     "fee": "1",
     "marketCap": "10E",
     "initialBuyAmount": "0",
-    "launcher": "Liquid"
+    "launcher": "Liquid",
+    "chainId": 8453
   }'
 ```
 
-**Required:** `name`, `symbol`. **Defaults:** `fee`="1", `marketCap`="10E", `initialBuyAmount`="0", `launcher`="Liquid".
+**Required:** `name`, `symbol`. **Defaults:** `fee`="1", `marketCap`="10E", `initialBuyAmount`="0", `launcher`="Liquid", `chainId`=8453.
 
 **Clanker/Liquid optional:** `description`, `imageUrl`, `secondsToDecay`, `telegramLink`, `twitterLink`, `farcasterLink`, `websiteLink`.
 
@@ -189,11 +192,12 @@ curl -s -X POST "${BASE_URL}/api/orbs/createOrb" \
     "symbol": "AGT",
     "launcher": "Virtuals",
     "description": "An autonomous trading agent",
-    "feeRecipient": "@Capminal"
+    "feeRecipient": "@Capminal",
+    "chainId": 8453
   }'
 ```
 
-**Required (Virtuals):** `name`, `symbol`, `launcher: "Virtuals"`.
+**Required (Virtuals):** `name`, `symbol`, `launcher: "Virtuals"`. **Defaults:** `chainId`=8453.
 
 **Virtuals optional:** `description`, `imageUrl`, `websiteLink`, `twitterLink`, `telegramLink`, `youtubeLink`, `cores` (integer array, default `[2,3,5]`), `purchaseAmount` (string, default `"0"` — backend auto-bumps to on-chain launchFee if lower; user pays in VIRTUAL).
 
@@ -279,7 +283,8 @@ curl -s -X POST "${BASE_URL}/api/orbs/trade" \
   -d '{
     "sellToken": "0x...",
     "buyToken": "0x...",
-    "sellAmount": "0.01"
+    "sellAmount": "0.01",
+    "chainId": 8453
   }'
 ```
 
@@ -289,6 +294,7 @@ Parameter  | Required | Description
 sellToken  | Yes      | Token address to sell
 buyToken   | Yes      | Token address to buy
 sellAmount | Yes      | Amount to sell (absolute e.g. "0.01", or percentage e.g. "50%")
+chainId    | No       | Chain ID (default 8453)
 ```
 
 See **Reference Tables** at the bottom for Common Token Addresses.
