@@ -13,6 +13,7 @@ Skills are modular abilities that teach AI agents new capabilities. Each skill c
 | Skill | Description | Author |
 |-------|-------------|--------|
 | [capminal](./capminal) | Interact with Cap Wallet via Capminal API | AndreaPN |
+| [contract-interaction](./contract-interaction) | Generic read/write of any smart contract — flexible ABI, address, params (via CAP API key) | AndreaPN |
 
 ## Installation
 
