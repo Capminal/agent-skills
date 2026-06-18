@@ -31,7 +31,7 @@ Before any request, resolve `CAP_API_KEY`:
 
 1. Read `~/cap_credentials.json` -> `{"CAP_API_KEY": "your-key"}`
 2. Fall back to `CAP_API_KEY` environment variable
-3. If not found, ask user to generate at https://www.capminal.ai/profile
+3. If not found, ask user to generate at https://www.capminal.ai/settings, tab API Key.
 
 **Save key:** `echo '{"CAP_API_KEY": "KEY"}' > ~/cap_credentials.json`
 **Revoke key:** `rm -f ~/cap_credentials.json`
