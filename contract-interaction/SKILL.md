@@ -1,5 +1,5 @@
 ---
-name: cap-contract-skill
+name: contract-interaction
 description: Generic smart-contract interaction for Capminal — read (call) and write (send tx) ANY contract on Base by passing a flexible ABI, contract address, function name and parameters, using your CAP API key.
 version: 0.1.0
 author: AndreaPN

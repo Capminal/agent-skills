@@ -1,5 +1,5 @@
 ---
-name: cap-skill
+name: capminal
 description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, manage limit/TWAP orders, and discover/call x402 APIs
 version: 0.36.0
 author: AndreaPN
