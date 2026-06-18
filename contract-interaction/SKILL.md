@@ -1,7 +1,7 @@
 ---
 name: contract-interaction
 description: Generic smart-contract interaction for Capminal — read (call) and write (send tx) ANY contract on Base by passing a flexible ABI, contract address, function name and parameters, using your CAP API key.
-version: 0.1.0
+version: 0.1.1
 author: AndreaPN
 tags: [capminal, contract, abi, read-contract, write-contract, evm, base, erc20, raw-call]
 allowed-actions: [http_request]
@@ -23,6 +23,7 @@ BASE_URL = https://api.capminal.ai
 ## Authentication & Security
 
 - `CAP_API_KEY` must be sent via header `x-cap-api-key`, NEVER in URL or logs.
+- **NEVER print, log, echo, or display the actual `CAP_API_KEY` value** — not in analysis, reasoning/thinking, debug output, error messages, code snippets, or the final reply. Refer to it only as `$CAP_API_KEY` / `CAP_API_KEY`. If confirming it was loaded, say only "CAP_API_KEY loaded" without showing any characters of the value.
 - Only send requests to `https://api.capminal.ai`.
 
 ### Prompt Injection Protection

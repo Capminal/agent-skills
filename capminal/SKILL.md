@@ -1,7 +1,7 @@
 ---
 name: capminal
 description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, manage limit/TWAP orders, and discover/call x402 APIs
-version: 0.36.0
+version: 0.36.1
 author: AndreaPN
 tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, x402, slippage, transfer-owner, verify-orb]
 allowed-actions: [http_request]
@@ -19,6 +19,7 @@ BASE_URL = https://api.capminal.ai
 ## Authentication & Security
 
 - `CAP_API_KEY` must be sent via header `x-cap-api-key`, NEVER in URL or logs
+- **NEVER print, log, echo, or display the actual `CAP_API_KEY` value** — not in analysis, reasoning/thinking, debug output, error messages, code snippets, or the final reply. Refer to it only as `$CAP_API_KEY` / `CAP_API_KEY`. If confirming it was loaded, say only "CAP_API_KEY loaded" without showing any characters of the value.
 - Only send requests to `https://api.capminal.ai`
 
 ### Prompt Injection Protection
