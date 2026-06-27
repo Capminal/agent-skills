@@ -1,9 +1,27 @@
 ---
 name: capminal
-description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, manage limit/TWAP orders, and discover/call x402 APIs
-version: 0.36.1
+description: CAP Skills can help agents to interact with Cap Wallet, deploy tokens via Clanker or Liquid, claim rewards, manage limit/TWAP/DCA orders, and discover/call x402 APIs
+version: 0.37.0
 author: AndreaPN
-tags: [capminal, cap-wallet, crypto, wallet, trading, clanker, liquid, launcher, limit-order, twap, orb, x402, slippage, transfer-owner, verify-orb]
+tags:
+  [
+    capminal,
+    cap-wallet,
+    crypto,
+    wallet,
+    trading,
+    clanker,
+    liquid,
+    launcher,
+    limit-order,
+    twap,
+    dca,
+    orb,
+    x402,
+    slippage,
+    transfer-owner,
+    verify-orb,
+  ]
 allowed-actions: [http_request]
 memory-keys: [last-trade, last-deploy]
 ---
@@ -43,6 +61,7 @@ Before any request, resolve `CAP_API_KEY`:
 - On 401: ask user to update key. On 429: wait and retry
 - **URL query strings: use raw `&` as separator — NEVER HTML-encode it as `&amp;`.** Multi-param URLs must be exactly `?a=1&b=2`, not `?a=1&amp;b=2`.
 - **On ANY write-action failure (Swap, Deploy, Transfer, Claim Rewards):** the API returns `{ "success": false, "message": "...", "error": "..." }` or a non-2xx status. You MUST:
+
   1. NEVER post the success template for that action.
   2. NEVER fabricate a `transactionHash`, `tokenAddress`, `preLaunchTxHash`, `poolId`, basescan URL, or `capminal.ai/base/...` URL on a failure path.
   3. Reply with a short, plain-text, human-readable summary derived from `message`/`error`, mapped through the table below. Under 2000 chars, no markdown, no URLs.
@@ -50,20 +69,21 @@ Before any request, resolve `CAP_API_KEY`:
 
   **Failure-message mapping (apply to all write actions):**
 
-  | Backend error contains | Reply with |
-  | --- | --- |
-  | `Insufficient ETH for gas` | "Action failed — your wallet needs ETH on Base for gas. Please fund the wallet and try again." |
-  | `Insufficient VIRTUAL` / `Insufficient ... balance` | "Action failed — not enough {token} in your wallet." |
-  | `Daily ... deploy limit reached` / `Daily ... limit` | "Daily deploy limit reached. Try again after 00:00 UTC." |
-  | `User does not have a private key` / `User not found` | "Your wallet isn't ready yet. Connect or create a Capminal wallet first." |
-  | `Recipient not found` | "Recipient not found on Twitter — double-check the username or use a 0x address." |
-  | `Failed to approve` | "Action failed at the approve step. Please try again." |
-  | `Return amount is not enough` / `Slippage` / slippage-related | "Trade failed — price moved past your slippage. Try again or raise slippage." |
-  | Anything else | "Action failed — please try again later." |
+  | Backend error contains                                        | Reply with                                                                                     |
+  | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+  | `Insufficient ETH for gas`                                    | "Action failed — your wallet needs ETH on Base for gas. Please fund the wallet and try again." |
+  | `Insufficient VIRTUAL` / `Insufficient ... balance`           | "Action failed — not enough {token} in your wallet."                                           |
+  | `Daily ... deploy limit reached` / `Daily ... limit`          | "Daily deploy limit reached. Try again after 00:00 UTC."                                       |
+  | `User does not have a private key` / `User not found`         | "Your wallet isn't ready yet. Connect or create a Capminal wallet first."                      |
+  | `Recipient not found`                                         | "Recipient not found on Twitter — double-check the username or use a 0x address."              |
+  | `Failed to approve`                                           | "Action failed at the approve step. Please try again."                                         |
+  | `Return amount is not enough` / `Slippage` / slippage-related | "Trade failed — price moved past your slippage. Try again or raise slippage."                  |
+  | Anything else                                                 | "Action failed — please try again later."                                                      |
 
 ### Table Format (REQUIRED)
 
 For table outputs, always return in standard markdown table format:
+
 ```markdown
 | Col 1  | Col 2  | ... | Col n  |
 | ------ | ------ | --- | ------ |
@@ -73,6 +93,7 @@ For table outputs, always return in standard markdown table format:
 ## Pre-Action Checklist (applies to ALL write actions: Trade, Transfer, Deploy)
 
 Before ANY action that moves tokens, ALWAYS:
+
 1. **Check wallet balance** — call Get Wallet Balance endpoint
 2. **Resolve token** — if user gives symbol (not address): check wallet `data.tokens[].symbol` first, then Common Addresses (see Reference Tables), then call Resolve Tokens API
 3. **Resolve balance** — if token not in wallet response, call Resolve Balance with the resolved address
@@ -128,6 +149,7 @@ curl -s "${BASE_URL}/api/token/resolve-addresses?addresses=0xabc...,0xdef..." \
 **Display as table:** `Address | Symbol | Name | Price (USD) | Market Cap | FDV | Error` (apply Table Format rule)
 
 **Required flow for symbol-only input (IMPORTANT):**
+
 - If user asks token price/market cap/info but only gives **symbol** (no address), call `resolve-tokens` first to get address.
 - Then call `resolve-addresses` with the resolved address(es).
 - Do not stop at `resolve-tokens` when user intent is market info.
@@ -144,6 +166,7 @@ curl -s "${BASE_URL}/api/token/resolve-balance?addresses=0xabc...,0xdef..." \
 ```
 
 **Notes:**
+
 - `resolve-balance` accepts token **addresses**. If user input is a symbol, resolve it with Resolve Tokens first.
 - Response includes per token: `address`, `name`, `decimals`, `balanceRaw`, `balance`, `error`.
 
@@ -155,11 +178,11 @@ curl -s "${BASE_URL}/api/token/resolve-balance?addresses=0xabc...,0xdef..." \
 
 Deploy a token via one of three launcher protocols. A single endpoint dispatches by the `launcher` field. Default `Liquid`.
 
-| Launcher | Protocol | Initial buy token | Notes |
-| -------- | -------- | ----------------- | ----- |
-| `Liquid` (default) | Liquid Protocol (Clanker V4) | ETH | Hooked Uniswap V4 pool |
-| `Clanker` | Clanker V4 | ETH | Hooked Uniswap V4 pool |
-| `Virtuals` | Virtuals Protocol (BondingV5) | VIRTUAL | preLaunch → indexer bot auto-launches in ~60s |
+| Launcher           | Protocol                      | Initial buy token | Notes                                         |
+| ------------------ | ----------------------------- | ----------------- | --------------------------------------------- |
+| `Liquid` (default) | Liquid Protocol (Clanker V4)  | ETH               | Hooked Uniswap V4 pool                        |
+| `Clanker`          | Clanker V4                    | ETH               | Hooked Uniswap V4 pool                        |
+| `Virtuals`         | Virtuals Protocol (BondingV5) | VIRTUAL           | preLaunch → indexer bot auto-launches in ~60s |
 
 ### Execute Deploy — Clanker / Liquid
 
@@ -209,12 +232,14 @@ curl -s -X POST "${BASE_URL}/api/orbs/createOrb" \
 Optional. **Default = `null` (omit the field entirely).** Only include `feeRecipient` if the user **explicitly** mentions a fee recipient / fee handler / fee transfer in their prompt. Do NOT prompt the user for it, do NOT default it to yourself, do NOT guess.
 
 When the user does specify one, accept either:
+
 - `0x` EVM address (40 hex chars) — e.g. `"feeRecipient": "0xabc...1234"`, OR
 - X (Twitter) handle (≤15 alphanumeric, `@` prefix optional) — e.g. `"feeRecipient": "@Capminal"` or `"feeRecipient": "Capminal"`.
 
 If provided, the deployer pays for launch + initial buy, then ownership is **auto-transferred** to this recipient right after deploy. If transfer fails, the deploy still succeeds and `feeRecipientTransferError` is set. Leave empty to keep yourself as creator.
 
 **NLU mapping examples:**
+
 - "fee is on @Capminal" → `feeRecipient: "@Capminal"`
 - "fee recipient is 0xabc...1234" → `feeRecipient: "0xabc...1234"`
 - "transfer fee to @Capminal" → `feeRecipient: "@Capminal"`
@@ -231,6 +256,7 @@ If the user wants a token image, they must provide a public HTTPS URL (Imgur, Cl
 **All launchers:** `data.feeRecipientTransfer` (object or `null`), `data.feeRecipientTransferError` (string or `null`).
 
 Show orb detail links:
+
 - Always: `https://www.capminal.ai/base/{tokenAddress}`
 - If `launcher` is `Liquid` (or omitted): `https://app.liquidprotocol.org/tokens/{tokenAddress}`
 - If `launcher` is `Clanker`: `https://www.clanker.world/clanker/{tokenAddress}`
@@ -240,29 +266,39 @@ If `feeRecipientTransfer` is non-null, also note: "Ownership auto-transferred to
 
 ---
 
-## Order Type Disambiguation (CRITICAL — read before Swap/Limit/TWAP)
+## Order Type Disambiguation (CRITICAL — read before Swap/Limit/TWAP/DCA)
 
-| Signal in user message | Action | Section |
-|----------------------|--------|---------|
-| No conditions — "buy X", "sell X", "swap X for Y" | **Swap** (immediate, market price) | Section 4 |
-| Price target — "at $X", "when price reaches/drops to" | **Limit Order** (price-triggered) | Section 9 |
-| Time split — "over X days", "gradually", "every X hours", "DCA" | **TWAP** (time-weighted) | Section 12 |
+**DCA and TWAP are different products — do not confuse them:**
+
+- **DCA** = a _recurring_ schedule on a calendar cadence (hourly / daily / weekly), a **fixed amount each run**, **no price condition**, can be **paused/resumed**, runs open-ended (or until an end date / execution cap). Use for "dollar cost average", "keep buying", "buy $X every day/week".
+- **TWAP** = split a **known total amount** across a **bounded window** in fixed intervals, **with price protection** (`allowedGain`), **cannot be paused**, finite. Use for "spread my X over Y", "sell all over 3 days".
+
+| Signal in user message                                                                                      | Action                             | Section    |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------- | ---------- |
+| No conditions — "buy X", "sell X", "swap X for Y"                                                           | **Swap** (immediate, market price) | Section 4  |
+| Price target — "at $X", "when price reaches/drops to"                                                       | **Limit Order** (price-triggered)  | Section 9  |
+| Recurring cadence — "DCA", "dollar cost average", "every day/week", "fixed $X each [period]", "keep buying" | **DCA** (recurring schedule)       | Section 21 |
+| Split a known total over a window — "spread my X over Y", "over X days", "sell all over 3 days"             | **TWAP** (time-weighted)           | Section 12 |
 
 **Decision priority:**
-1. Explicit keyword wins: "twap", "limit order", "dca" → route directly
+
+1. Explicit keyword wins: "twap" → TWAP; "dca"/"dollar cost average" → DCA; "limit order" → Limit
 2. Price condition ("at $X", "when it hits $X") → Limit Order
-3. Time-split condition ("over 3 days", "gradually", "every hour") → TWAP
-4. No conditions → Swap (immediate)
-5. Both price AND time → TWAP (use `allowedGain` for price protection)
-6. Ambiguous → ASK user: "Execute now (swap), at target price (limit order), or spread over time (TWAP)?"
+3. Recurring calendar cadence ("every day", "weekly", "$X each hour", no defined total/end) → DCA
+4. Split a known total over a bounded window ("spread my 1 ETH over 6h", "sell all over 3 days") → TWAP
+5. No conditions → Swap (immediate)
+6. Ambiguous → ASK user: "Execute now (swap), at target price (limit order), recurring buys (DCA), or spread a total over a window (TWAP)?"
 
 **Examples:**
+
 - "buy 1000 CAP" → Swap
 - "buy 1000 CAP at $0.05" → Limit Order
+- "DCA $50 into ETH every day" → DCA
+- "buy $100 of CAP every hour" → DCA
+- "DCA into ETH $100 every hour for a week" → DCA (HOURLY, `intervalHours` derived, `expiresAt` = 1 week)
+- "spread 1 ETH buy over 6 hours" → TWAP
 - "sell CAP over 3 days" → TWAP
-- "gradually sell all CAP" → TWAP
 - "sell all CAP" → Swap
-- "DCA into ETH $100 every hour for a week" → TWAP
 
 ---
 
@@ -290,6 +326,7 @@ curl -s -X POST "${BASE_URL}/api/orbs/trade" \
 ```
 
 **Parameters:**
+
 ```text
 Parameter  | Required | Description
 sellToken  | Yes      | Token address to sell
@@ -312,6 +349,7 @@ See **Reference Tables** at the bottom for Common Token Addresses.
 ### Handling "sell all" / max amount
 
 When user asks to sell ALL of a token:
+
 - Use `sellAmount: "100%"` — the API supports percentage amounts
 - Do NOT copy the balance number manually — precision loss will cause "insufficient balance" errors
 
@@ -324,6 +362,7 @@ When user asks to sell ALL of a token:
 ### Pre-Transfer Flow (REQUIRED)
 
 Follow **Pre-Action Checklist** above, plus:
+
 - **Normalize recipient** from user input: `0x...` EVM address, handles (`@user`, `tg:user`, `fc:user`), or ENS `*.eth`
 
 ```bash
@@ -350,6 +389,7 @@ See **Reference Tables** for Common Token Addresses. For unknown symbols, use Re
 **Triggers:** burn, burn token, burn tokens, destroy tokens
 
 When user asks to **burn** tokens, this is a transfer to the standard burn address:
+
 - `toAddress`: `0x000000000000000000000000000000000000dEaD` (see Reference Tables)
 - Follow the same Pre-Transfer flow (check balance, resolve token, validate)
 - **Two-message confirmation (REQUIRED):**
@@ -515,7 +555,9 @@ Optional filters: `status` (`ACTIVE|COMPLETED|CANCELLED|EXPIRED|FAILED`), `order
 
 ## 12. Create TWAP Order
 
-**Triggers:** twap, dca, dollar cost average, buy/sell over [time], gradually buy/sell, spread over time, buy/sell every [interval], scheduled buy/sell, drip buy
+**Triggers:** twap, spread [total] over [time], split [amount] over [window], buy/sell over [X days/hours], sell all over [time]
+
+> TWAP splits a **known total** over a **bounded window** with price protection. For recurring fixed-amount buys ("DCA", "dollar cost average", "$X every day/week"), use **DCA** instead → Section 21.
 
 ### Pre-Create Flow (REQUIRED)
 
@@ -530,11 +572,11 @@ Optional filters: `status` (`ACTIVE|COMPLETED|CANCELLED|EXPIRED|FAILED`), `order
 
 `totalAmount` is **always denominated in `tokenAddress` units** — the token being acquired in a BUY (or disposed in a SELL), never the quote token. If the user states the amount in **quote-token** terms, convert it to `tokenAddress` units first and **subtract 5%** (inflation buffer) before sending.
 
-| User says | How to derive `totalAmount` |
-|-----------|------------------------------|
-| `buy 100% ETH by CAP` — amount given in `tokenAddress` (ETH), percentage | Resolve the ETH (`tokenAddress`) balance → use it as `totalAmount`. |
-| `buy ETH by 1M CAP` — amount given in quote token (CAP), absolute | Price-check: `ethAmount = 1,000,000 × CAP_price ÷ ETH_price`; `totalAmount = ethAmount × 0.95`. |
-| `buy ETH by 50% CAP` — amount given in quote token (CAP), percentage | Resolve the CAP (quote) balance → take 50% → convert to ETH via prices → `totalAmount = ethAmount × 0.95`. |
+| User says                                                                | How to derive `totalAmount`                                                                                |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `buy 100% ETH by CAP` — amount given in `tokenAddress` (ETH), percentage | Resolve the ETH (`tokenAddress`) balance → use it as `totalAmount`.                                        |
+| `buy ETH by 1M CAP` — amount given in quote token (CAP), absolute        | Price-check: `ethAmount = 1,000,000 × CAP_price ÷ ETH_price`; `totalAmount = ethAmount × 0.95`.            |
+| `buy ETH by 50% CAP` — amount given in quote token (CAP), percentage     | Resolve the CAP (quote) balance → take 50% → convert to ETH via prices → `totalAmount = ethAmount × 0.95`. |
 
 After resolving, state the computed `totalAmount` to the user before creating the order.
 
@@ -630,6 +672,7 @@ Execute an x402 API call with a specific HTTP method and parameters. The system 
 ### Pre-Call Validation
 
 User message MUST contain:
+
 1. A call keyword: `call x402`, `execute x402`
 2. A valid HTTPS URL (starting with `https://`)
 3. HTTP method (GET or POST) OR params — at least one must be present
@@ -658,11 +701,13 @@ curl -s -X POST "${BASE_URL}/api/actions/x402/call" \
 ### Method Extraction Rules
 
 Look for method indicators in this priority order:
+
 1. `method: GET` or `method: POST` (with colon)
 2. `method GET` or `method POST` (without colon, space-separated)
 3. Standalone `GET` or `POST` after the URL and before `params`
 
 **Defaults:**
+
 - If method not specified but params are provided → default to `POST`
 - If method not specified and no params → default to `GET`
 - Always output as uppercase: `GET` or `POST`
@@ -670,6 +715,7 @@ Look for method indicators in this priority order:
 ### Params Extraction Rules
 
 Look for params after `params:` keyword:
+
 - JSON string: `params: {"key": "value"}` → parse as JSON object
 - JSON object: `params: {key: value}` → parse as JSON
 - If no params provided → use empty object `{}`
@@ -727,11 +773,11 @@ curl -s -X POST "${BASE_URL}/api/wallet/updateSlippageBps" \
 
 Transfer ownership of an orb to a new wallet. The single endpoint dispatches by `launcher`:
 
-| Launcher | What gets transferred | # txs |
-| -------- | --------------------- | ----- |
-| `Liquid` (default) | reward recipient + reward admin + admin (locker) | 3 |
-| `Clanker` | reward recipient + reward admin + admin (locker) | 3 |
-| `Virtuals` | AgentTaxV2 creator (fee recipient on BondingV5) | 1 |
+| Launcher           | What gets transferred                            | # txs |
+| ------------------ | ------------------------------------------------ | ----- |
+| `Liquid` (default) | reward recipient + reward admin + admin (locker) | 3     |
+| `Clanker`          | reward recipient + reward admin + admin (locker) | 3     |
+| `Virtuals`         | AgentTaxV2 creator (fee recipient on BondingV5)  | 1     |
 
 **Caller must currently be the owner — otherwise the API returns 403.** `launcher` must match the protocol that originally deployed the token. If unknown, read `gemSource` from `GET /api/orbs/market/{tokenAddress}` — it returns `Clanker`, `Liquid`, or `Virtuals`.
 
@@ -777,16 +823,16 @@ curl -s -X POST "${BASE_URL}/api/orbs/transferOrbOwner" \
 
 **Display as table — Clanker / Liquid:**
 
-| Role | Tx Hash |
-| ---- | ------- |
+| Role             | Tx Hash                 |
+| ---------------- | ----------------------- |
 | Reward Recipient | {rewardRecipientTxHash} |
-| Reward Admin | {rewardAdminTxHash} |
-| Admin | {adminTxHash} |
+| Reward Admin     | {rewardAdminTxHash}     |
+| Admin            | {adminTxHash}           |
 
 **Display as table — Virtuals:**
 
-| Role | Tx Hash |
-| ---- | ------- |
+| Role                 | Tx Hash               |
+| -------------------- | --------------------- |
 | Creator (AgentTaxV2) | {updateCreatorTxHash} |
 
 ### Error Handling
@@ -862,9 +908,9 @@ curl -s -X GET "${BASE_URL}/api/orbs/verifyOrb?tokenAddress=0xabc...abcd" \
 Short sentence followed by a small table (apply Table Format rule). When `isOrb` is `true`, append the orb detail link `https://www.capminal.ai/base/{tokenAddress}` after the table.
 
 ```markdown
-| Token Address | Capminal Orb |
-| ------------- | ------------ |
-| {tokenAddress} | Yes / No |
+| Token Address  | Capminal Orb |
+| -------------- | ------------ |
+| {tokenAddress} | Yes / No     |
 ```
 
 ### Examples
@@ -875,16 +921,107 @@ Short sentence followed by a small table (apply Table Format rule). When `isOrb`
 
 ---
 
+## 20. Get DCA Orders
+
+**Triggers:** dca orders, list dca, my dca, active dca, paused dca, dca list
+
+DCA orders run on a recurring schedule (hourly/daily/weekly). Default to `status=ACTIVE` unless the user asks another status.
+
+```bash
+curl -s -X GET "${BASE_URL}/api/dca/command?status=ACTIVE" \
+  -H "x-cap-api-key: $CAP_API_KEY"
+```
+
+Optional filters: `status` (`ACTIVE|PAUSED|COMPLETED|CANCELLED|EXPIRED|FAILED`), `dcaType` (`BUY|SELL`).
+
+**Response contains:** `data[]` orders with fields like `id`, `status`, `dcaType`, `dcaUnit`, `tokenSymbol`, `quoteTokenSymbol`, `dcaAmountUsdValue`, `dcaAmountToken`, `frequency`, `intervalHours`, `dcaCount`, `dcaAvgPriceUsd`, `totalExpectedCount`, `nextRunAt`, `expiresAt`.
+
+**Display as table:** `Order ID | Status | Type | Token | Quote Token | Amount | Frequency | Done | Avg Price (USD) | Next Run | Expires`
+
+`Done` format: `{dcaCount}/{totalExpectedCount}` when a cap is set (example: `5/30`), otherwise just `{dcaCount}`.
+
+---
+
+## 21. Create DCA Order
+
+**Triggers:** dca, dollar cost average, buy/sell $X every [hour/day/week], recurring buy/sell, keep buying, drip buy on a schedule
+
+DCA places a **fixed amount per run** on a recurring calendar schedule, with **no price condition**. For splitting a known total over a bounded window with price protection, use **TWAP** instead → Section 12.
+
+### Pre-Create Flow (REQUIRED)
+
+- If the user gives a symbol instead of an address, resolve the token first from wallet balance (`/api/wallet/balance`) or Resolve Tokens API.
+- If `quoteTokenAddress` is missing, use the native ETH address.
+- Determine `dcaUnit`: a USD amount ("$50") → `USD` with `dcaAmountUsdValue`; a token amount ("0.01 ETH") → `TOKEN_AMOUNT` with `dcaAmountToken`.
+- Map cadence to `frequency`:
+  - "every hour / every N hours" → `HOURLY` with `intervalHours` ∈ `{1,2,4,8}` (pick the closest allowed value).
+  - "every day / daily" → `DAILY` (optionally set `runAtHour`/`runAtMinute`).
+  - "every week / weekly" → `WEEKLY` (optionally set `runOnWeekday` 0=Sunday, `runAtHour`/`runAtMinute`).
+- If the user gives an end ("for a week", "for 30 days"), set `expiresAt` (ISO 8601) or `duration` (seconds). If they give a count ("10 buys"), set `totalExpectedCount`.
+
+```bash
+curl -s -X POST "${BASE_URL}/api/dca/command" \
+  -H "x-cap-api-key: $CAP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tokenAddress": "0x...",
+    "quoteTokenAddress": "0x0000000000000000000000000000000000000000",
+    "dcaType": "BUY",
+    "dcaUnit": "USD",
+    "dcaAmountUsdValue": "50",
+    "frequency": "DAILY",
+    "runAtHour": 9,
+    "runAtMinute": 0,
+    "expiresAt": "2026-08-01T00:00:00.000Z"
+  }'
+```
+
+**Required:** `tokenAddress`, `dcaType` (`BUY|SELL`), `dcaUnit` (`USD|TOKEN_AMOUNT`), `frequency` (`HOURLY|DAILY|WEEKLY`).
+
+**Optional:** `quoteTokenAddress` (default ETH/native), `dcaAmountUsdValue` (for USD), `dcaAmountToken` (for TOKEN_AMOUNT), `intervalHours` (HOURLY only: `1|2|4|8`), `runAtMinute` (0–59), `runAtHour` (0–23), `runOnWeekday` (0–6), `startAt`, `expiresAt`, `duration` (seconds), `totalExpectedCount`, `chainId`.
+
+State the resolved amount, cadence, and end condition to the user before creating.
+
+**Response:** `data.id` (new DCA order id).
+
+---
+
+## 22. Manage DCA Order (Cancel / Pause / Resume)
+
+**Triggers:** cancel dca, stop dca, pause dca, resume dca, restart dca
+
+Pause/resume is **DCA-only** (TWAP cannot be paused). A paused order is skipped by the cron until resumed; resuming recomputes `nextRunAt` from now.
+
+```bash
+# Cancel (permanent — sets status CANCELLED)
+curl -s -X POST "${BASE_URL}/api/dca/command/123/cancel" \
+  -H "x-cap-api-key: $CAP_API_KEY"
+
+# Pause (ACTIVE → PAUSED)
+curl -s -X POST "${BASE_URL}/api/dca/command/123/pause" \
+  -H "x-cap-api-key: $CAP_API_KEY"
+
+# Resume (PAUSED → ACTIVE)
+curl -s -X POST "${BASE_URL}/api/dca/command/123/resume" \
+  -H "x-cap-api-key: $CAP_API_KEY"
+```
+
+Replace `123` with the DCA order id. Cancel works on any non-terminal order; pause requires `ACTIVE`; resume requires `PAUSED`.
+
+**Response:** `data.id` and `data.status` (resume also returns `nextRunAt`).
+
+---
+
 ## Reference Tables
 
 ### Common Token Addresses (Base chain)
 
-| Symbol | Address |
-|--------|---------|
+| Symbol       | Address                                      |
+| ------------ | -------------------------------------------- |
 | ETH (native) | `0x0000000000000000000000000000000000000000` |
-| WETH | `0x4200000000000000000000000000000000000006` |
-| USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| CAP | `0xbfa733702305280F066D470afDFA784fA70e2649` |
+| WETH         | `0x4200000000000000000000000000000000000006` |
+| USDC         | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| CAP          | `0xbfa733702305280F066D470afDFA784fA70e2649` |
 | Burn address | `0x000000000000000000000000000000000000dEaD` |
 
 **ETH (native) and WETH are distinct tokens** — when the user says "ETH" use `0x0000000000000000000000000000000000000000`; when the user says "WETH" use `0x4200000000000000000000000000000000000006`. Never substitute one for the other (e.g. don't quote/buy a TWAP in native ETH when the user asked for WETH, and vice versa). If the wallet balance lists only one of them, resolve the other's balance explicitly via Resolve Balance before deciding it's unavailable.
