@@ -46,6 +46,33 @@ Before any request, resolve `CAP_API_KEY`:
 **Save key:** `echo '{"CAP_API_KEY": "KEY"}' > ~/cap_credentials.json`
 **Revoke key:** `rm -f ~/cap_credentials.json`
 
+### Wallet (EOA) Resolution
+
+The skill needs your **EOA address** as `sender` for `getB20Address`, as `initialAdmin`, and as the default mint recipient. **Resolve it automatically — do NOT ask the user** unless the call fails. Call Capminal's wallet balance endpoint and read `data.address`:
+
+```bash
+curl -s -X GET "${BASE_URL}/api/wallet/balance" \
+  -H "x-cap-api-key: $CAP_API_KEY" -H "Content-Type: application/json"
+# -> data.address  ==  your EOA  ==  $ADMIN
+```
+
+Save `data.address` as `$ADMIN`. Only if this returns no address (e.g. wallet not set up), ask the user for their EOA address.
+
+### Input Defaults
+
+Resolve token parameters from the user's prompt, applying these defaults silently (state them in the Step 2 confirmation, don't ask):
+
+| Param | Default when unspecified |
+| --- | --- |
+| `name` | the given token name/word (e.g. "MORSE") |
+| `symbol` | same as `name` if only one identifier is given |
+| `decimals` | `18` |
+| `supply cap` | **no cap** — omit the `updateSupplyCap` initCall |
+| `salt` | auto-generate: `cast keccak "<name>-<symbol>-<short-random-suffix>"` |
+| mint amount | only if the user asks to mint; `"1B"` = `1,000,000,000`, etc. |
+
+If a supply cap **is** requested, it must be ≥ the amount you intend to mint, or the mint reverts.
+
 ## General Rules
 
 - **Chain:** Base only (chainId `8453`). `chainId` is optional; if sent it must be `8453`.
@@ -122,7 +149,7 @@ If `data.result` is `false` (or not `true`) → **STOP**. Tell the user: *"B20 \
 
 ## 3. Step 1 — Predict the token address (read)
 
-`createB20` returns the new token address, but the write endpoint returns only a `transactionHash`. So predict the deterministic address first with the factory's `getB20Address(variant, sender, salt)` view. `sender` is **your Capminal EOA wallet address** (the account that will sign `createB20`). If you don't know it, ask the user for their EOA address. This address is also the `initialAdmin` and the default mint recipient (`$ADMIN`).
+`createB20` returns the new token address, but the write endpoint returns only a `transactionHash`. So predict the deterministic address first with the factory's `getB20Address(variant, sender, salt)` view. `sender` is `$ADMIN` — your Capminal EOA address, already auto-resolved via [Wallet (EOA) Resolution](#wallet-eoa-resolution). This same address is the `initialAdmin` and the default mint recipient.
 
 ```bash
 curl -s -X POST "${BASE_URL}/api/contract/read" \
@@ -147,11 +174,11 @@ Save `data.result` as `TOKEN_ADDRESS`.
 
 ## 4. Step 2 — Confirm with the user (two-step)
 
-Before writing, summarize in plain language and ask for an explicit **yes**:
+Before writing, summarize in plain language — **including every default you applied** — and ask for an explicit **yes**:
 
-> About to create a B20 **Asset** token: name `My Token`, symbol `MYT`, decimals `18`, supply cap `1,000,000`, admin/minter `0xYourEoa…`, salt `0x…`, predicted address `TOKEN_ADDRESS`. Then mint `1,000,000` to the admin. Proceed?
+> About to create a B20 **Asset** token: name `MORSE`, symbol `MORSE`, decimals `18` (default), supply cap `none` (default), admin/minter `0xYourEoa…` (your wallet), salt `0x…`, predicted address `TOKEN_ADDRESS`. Then mint `1,000,000,000` (1B) to the admin. Proceed?
 
-Only on an explicit affirmative, continue.
+Only on an explicit affirmative, continue. This confirmation is **always required** — never auto-execute a write.
 
 ---
 
