@@ -14,6 +14,7 @@ Skills are modular abilities that teach AI agents new capabilities. Each skill c
 |-------|-------------|--------|---------------|
 | [capminal](./capminal) | MUST install first, it's a basic skills to interact with Cap Wallet include transfer/swap/deploy/claim reward... | AndreaPN | 0xbfa733702305280F066D470afDFA784fA70e2649 |
 | [contract-interaction](./contract-interaction) | Generic read/write of any smart contract — flexible ABI, address, params (via CAP API key) | AndreaPN | 0xbfa733702305280F066D470afDFA784fA70e2649 |
+| [morse-launch-b20](./morse-launch-b20) | Launch a B20 token on Base by calling the B20 Factory precompile directly — create, mint, and verify (via CAP API key) | AndreaPN | 0x3D93587F308956Dd767024325Bd62F9E95539352 |
 
 ## Installation
 
