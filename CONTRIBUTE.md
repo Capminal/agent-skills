@@ -105,7 +105,13 @@ How to handle common errors.
 
 ## 6. Register your skill in the README
 
-Add a row to the **Available Skills** table in [`README.md`](./README.md) with your skill name, a short description, and your author handle.
+Add a row to the **Available Skills** table in [`README.md`](./README.md) with your skill name, a short description, your author handle, and the related token address.
+
+```markdown
+| [your-skill-name](./your-skill-name) | Short description of what the skill does | YourName | 0x... |
+```
+
+If your skill does not have a related token address, leave the field empty.
 
 ## 7. Commit and push
 
